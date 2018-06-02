@@ -5,9 +5,9 @@
 #include <iterator>
 #include <assert.h>
 #include <unordered_set>
-
 using namespace std;
 // region struct
+
 class Computation;
 namespace std {
 template<>
@@ -28,9 +28,14 @@ public:
     }
 
     size_t overlapNumber()const { return overlappingComps.size(); }
-    bool overlaps(const Computation& other)const {
-        return other.end > start ||
-               other.start < end;
+    bool overlapsLeft(const Computation& other)const {
+        assert(other.start <= start);
+        return other.end >= start;
+    }
+
+    bool overlapsRight(const Computation& other) const {
+        assert(other.start >= start);
+        return end >= other.start;
     }
     Computation& operator=(const Computation& other) = default;
 
@@ -94,10 +99,12 @@ vector<Computation> readComputations() {
 }
 void computeOverlapingCompsLeft(vector<Computation>& comp_vec, int index) {
     Computation& this_comp = comp_vec.at(index);
+    index--;
 
     while (index >= 0) {
-        if (this_comp.overlaps(comp_vec.at(index))) {
-            this_comp.addOverlapingComp(&comp_vec.at(index));
+        auto& other = comp_vec.at(index);
+        if (this_comp.overlapsLeft(other)) {
+            this_comp.addOverlapingComp(&other);
             index--;
         }
         else {
@@ -108,10 +115,13 @@ void computeOverlapingCompsLeft(vector<Computation>& comp_vec, int index) {
 
 void computeOverlapingCompsRight(vector<Computation>& comp_vec, int index) {
     Computation& this_comp = comp_vec.at(index);
+    index++;
 
     while (index < comp_vec.size()) {
-        if (this_comp.overlaps(comp_vec.at(index))) {
-            this_comp.addOverlapingComp(&comp_vec.at(index));
+        auto& other = comp_vec.at(index);
+
+        if (this_comp.overlapsRight(other)) {
+            this_comp.addOverlapingComp(&other);
             index++;
         }
         else {
@@ -126,29 +136,28 @@ void computeOverlapingComps(vector<Computation>& comp_vec, int this_index) {
 }
 //endregion
 
+vector<Computation> mockComputations() {
+    return vector<Computation> {
+        Computation{ 9, 12 },
+        Computation{ 2, 7 },
+        Computation{ 15, 21 },
+        Computation{ 9, 16 }
+    };
+}
+
 int main()
 {
+    auto comps = mockComputations();
 //    vector<Computation> comps = readComputations();
 //
-//    sort(comps.begin(), comps.end(), StartComparator());
-//
-//    for (int i = 0; i < comps.size(); ++i) {
-//        computeOverlapingComps(comps, i);
-//    }
-//
-//    ostream_iterator<Computation> output(cerr, " ");
-//    std::copy(comps.begin(), comps.end(), output);
+    sort(comps.begin(), comps.end(), StartComparator());
+
+    for (int i = 0; i < comps.size(); ++i) {
+        computeOverlapingComps(comps, i);
+    }
+
+    ostream_iterator<Computation> output(cerr, " ");
+    std::copy(comps.begin(), comps.end(), output);
 //
 //    return 0;
-
-    Computation comp;
-
-
-    Computation c1 { 14, 4 };
-    Computation c2{ 4, 5 };
-
-    comp.addOverlapingComp(&c1);
-    comp.addOverlapingComp(&c2);
-
-    cout << comp;
 }
