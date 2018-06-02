@@ -73,7 +73,7 @@ std::ostream& operator<<(std::ostream& os, const Computation& comp) {
     });
 
     for (auto overlapping : comp_vec) {
-        writeSpan(os, *overlapping) << ",\n\t\t\t";
+        writeSpan(os, *overlapping) << ",\n\t\t";
     }
     os << "}\n}";
     return os;
@@ -97,23 +97,8 @@ vector<Computation> readComputations() {
     for_each(comps.begin(), comps.end(), readComputation);//[](Computation& comp) { readComputation(comp); });
     return comps;
 }
-void computeOverlapingCompsLeft(vector<Computation>& comp_vec, int index) {
-    Computation& this_comp = comp_vec.at(index);
-    index--;
 
-    while (index >= 0) {
-        auto& other = comp_vec.at(index);
-        if (this_comp.overlapsLeft(other)) {
-            this_comp.addOverlapingComp(&other);
-            index--;
-        }
-        else {
-            break;
-        }
-    }
-}
-
-void computeOverlapingCompsRight(vector<Computation>& comp_vec, int index) {
+void computeOverlapingComps(vector<Computation>& comp_vec, int index) {
     Computation& this_comp = comp_vec.at(index);
     index++;
 
@@ -122,17 +107,13 @@ void computeOverlapingCompsRight(vector<Computation>& comp_vec, int index) {
 
         if (this_comp.overlapsRight(other)) {
             this_comp.addOverlapingComp(&other);
+            other.addOverlapingComp(&this_comp);
             index++;
         }
         else {
             break;
         }
     }
-}
-void computeOverlapingComps(vector<Computation>& comp_vec, int this_index) {
-    // go left until zero index, add all comps that overlap, stop when first does not overlap
-    computeOverlapingCompsLeft(comp_vec, this_index);
-    computeOverlapingCompsRight(comp_vec, this_index);
 }
 //endregion
 
@@ -147,8 +128,8 @@ vector<Computation> mockComputations() {
 
 int main()
 {
-    auto comps = mockComputations();
-//    vector<Computation> comps = readComputations();
+    // auto comps = mockComputations();
+    vector<Computation> comps = readComputations();
 //
     sort(comps.begin(), comps.end(), StartComparator());
 
@@ -156,8 +137,8 @@ int main()
         computeOverlapingComps(comps, i);
     }
 
-    ostream_iterator<Computation> output(cerr, " ");
+    ostream_iterator<Computation> output(cerr, ",\n");
     std::copy(comps.begin(), comps.end(), output);
 //
-//    return 0;
+    return 0;
 }
