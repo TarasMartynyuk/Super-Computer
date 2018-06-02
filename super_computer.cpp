@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
-#include <assert.h>
+#include <cassert>
 #include <unordered_set>
 #include <chrono>
 using namespace std::chrono;
@@ -11,17 +11,16 @@ using namespace std;
 //region defs
 
 class Computation;
-void readComputation(Computation& c);
+void readComputation(Computation* c);
 vector<Computation> readComputations();
-Computation* readComputationsPtr(int& length);
+Computation** readComputationsPtr(int& length);
 
 ostream& writeSpan(ostream& os, const Computation& comp);
 ostream& operator<<(std::ostream& os, const Computation& comp);
 
 Computation** mockComputations(int& i);
-void printRes(const unordered_set<Computation*> res);
+void printRes(const unordered_set<Computation*>& res);
 void print(Computation** comps, int length);
-
 
 //endregion
 // region struct
@@ -44,14 +43,10 @@ public:
     }
 
     size_t overlapNumber()const { return overlappingComps.size(); }
-    bool overlapsLeft(const Computation& other)const {
-        assert(other.start <= start);
-        return other.end >= start;
-    }
 
     bool overlapsRight(const Computation& other) const {
         assert(other.start >= start);
-        return end >= other.start;
+        return end > other.start;
     }
     Computation& operator=(const Computation& other) = default;
 
@@ -100,69 +95,71 @@ int main()
     auto start = high_resolution_clock::now();
 //    auto comps = readComputations();
     int length;
-    auto comps = mockComputations(length);
-//    auto comps = readComputationsPtr(length);
+//    auto comps = mockComputations(length);
+    auto comps = readComputationsPtr(length);
 
     sort(comps, comps + length, StartComparator());
 
-     for (int i = 0; i < length; ++i) {
+    for (int i = 0; i < length; ++i) {
          computeOverlapingComps(i, comps, length);
-     }
+    }
 
-    print(comps, length);
+    sort(comps, comps + length, OverlapsNumberComparator());
 
-    cerr << "\n\n\n";
+//    print(comps, length);
+//    cerr << "\n----------------------result-----------------------------\n";
 
-     sort(comps, comps + length, OverlapsNumberComparator());
-
-//    unordered_set<Computation*> result;
-//    for_each(comps, comps + length, [&result](Computation c) {
-//        if(all_of(c.overlappingComps.begin(), c.overlappingComps.end(),
-//                   [&result](Computation* overlap) {
-//                    return result.count(overlap) == 0;
-//        })) {
-//            result.insert(&c);
-//        }
-//    });
+    unordered_set<Computation*> result;
+    for_each(comps, comps + length, [&result](Computation* c) {
+        if(all_of(c->overlappingComps.begin(), c->overlappingComps.end(),
+                   [&result](Computation* overlap) {
+                    return result.count(overlap) == 0;
+        })) {
+            result.insert(c);
+        }
+    });
 
     auto finish = high_resolution_clock::now();
     auto seconds = duration_cast<microseconds>(finish - start);
     cerr << "seconds: " << (seconds.count() / 1000.0) << endl;
 
-
 //    printRes(result);
+//    cerr << endl;
+
+    cout << result.size();
 
     return 0;
 }
 
-void readComputation(Computation& c) {
+void readComputation(Computation* c) {
     int J;
     int D;
     cin >> J >> D;
 
-    c.start = J;
-    c.end = J + D;
+    c->start = J;
+    c->end = J + D;
 
     cin.ignore();
 }
 
-vector<Computation> readComputations() {
-    int length;
+//vector<Computation> readComputations() {
+//    int length;
+//    cin >> length;
+//    cin.ignore();
+//    vector<Computation> comps(length);
+//
+//    for_each(comps.begin(), comps.end(), readComputation);//[](Computation& comp) { readComputation(comp); });
+//
+//    return comps;
+//}
+
+Computation** readComputationsPtr(int& length) {
     cin >> length;
     cin.ignore();
-    vector<Computation> comps(length);
-
-    for_each(comps.begin(), comps.end(), readComputation);//[](Computation& comp) { readComputation(comp); });
-
-    return comps;
-}
-
-Computation* readComputationsPtr(int& length) {
-    cin >> length;
-    cin.ignore();
-    auto* comps = new Computation[length];
+    auto** comps = new Computation*[length];
 
     for (int i = 0; i < length; ++i) {
+        comps[i] = new Computation();
         readComputation(comps[i]);
     }
     return comps;
@@ -202,16 +199,16 @@ Computation** mockComputations(int& i) {
     };
 }
 
-void printRes(const unordered_set<Computation*> res) {
-    cerr << "\nresult: { ";
-    for (auto r : res) {
+void printRes(const unordered_set<Computation*>& res) {
+    cerr << "[ ";
+    for (auto* r : res) {
         writeSpan(cerr, *r) << ",\n\t\t";
     }
-    cerr << "}\n}";
+    cerr << "]";
 }
 
 void print(Computation** comps, int length) {
-    cerr << "\n[ { ";
+    cerr << "\n[ ";
 
     for (int i = 0; i < length; ++i) {
         cerr << *comps[i] << ",\n";
