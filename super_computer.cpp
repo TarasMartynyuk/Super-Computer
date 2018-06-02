@@ -18,11 +18,12 @@ Computation* readComputationsPtr(int& length);
 ostream& writeSpan(ostream& os, const Computation& comp);
 ostream& operator<<(std::ostream& os, const Computation& comp);
 
-Computation* mockComputations(int& i);
+Computation** mockComputations(int& i);
 void printRes(const unordered_set<Computation*> res);
+void print(Computation** comps, int length);
+
 
 //endregion
-
 // region struct
 
 namespace std {
@@ -64,29 +65,27 @@ size_t std::hash<Computation>::operator()(const Computation& c) const noexcept {
 }
 
 struct StartComparator {
-    bool operator()(const Computation& left,
-                    const Computation& right) {
-        return left.start < right.start;
+    bool operator()(Computation* left, Computation* right) {
+        return left->start < right->start;
     }
 };
 struct OverlapsNumberComparator {
-    bool operator()(const Computation& left,
-                    const Computation& right) {
-        return left.overlapNumber() < right.overlapNumber();
+    bool operator()(Computation* left, Computation* right) {
+        return left->overlapNumber() < right->overlapNumber();
     }
 };
 //endregion
 
-void computeOverlapingComps(int index, Computation* comp_arr, const int length) {
-    Computation& this_comp = comp_arr[index];
+void computeOverlapingComps(int index, Computation** comp_arr, const int length) {
+    auto* this_comp = comp_arr[index];
     index++;
 
     while (index < length) {
-        auto& other = comp_arr[index];
+        auto* other = comp_arr[index];
 
-        if (this_comp.overlapsRight(other)) {
-            this_comp.addOverlapingComp(&other);
-            other.addOverlapingComp(&this_comp);
+        if (this_comp->overlapsRight(*other)) {
+            this_comp->addOverlapingComp(other);
+            other->addOverlapingComp(this_comp);
             index++;
         }
         else {
@@ -110,32 +109,31 @@ int main()
          computeOverlapingComps(i, comps, length);
      }
 
+    print(comps, length);
+
+    cerr << "\n\n\n";
+
      sort(comps, comps + length, OverlapsNumberComparator());
 
-    unordered_set<Computation*> result;
-    for_each(comps, comps + length, [&result](Computation c) {
-        if(! any_of(c.overlappingComps.begin(), c.overlappingComps.end(),
-                   [&result](Computation* overlap) {
-                    return result.count(overlap) == 0;
-        })) {
-            result.insert(&c);
-        }
-    });
+//    unordered_set<Computation*> result;
+//    for_each(comps, comps + length, [&result](Computation c) {
+//        if(all_of(c.overlappingComps.begin(), c.overlappingComps.end(),
+//                   [&result](Computation* overlap) {
+//                    return result.count(overlap) == 0;
+//        })) {
+//            result.insert(&c);
+//        }
+//    });
 
     auto finish = high_resolution_clock::now();
     auto seconds = duration_cast<microseconds>(finish - start);
     cerr << "seconds: " << (seconds.count() / 1000.0) << endl;
 
-    ostream_iterator<Computation> output(cerr, ",\n");
-    std::copy(comps, comps + length, output);
 
-    printRes(result);
+//    printRes(result);
 
     return 0;
 }
-
-
-
 
 void readComputation(Computation& c) {
     int J;
@@ -194,13 +192,13 @@ ostream& operator<<(std::ostream& os, const Computation& comp) {
     return os;
 }
 
-Computation* mockComputations(int& i) {
+Computation** mockComputations(int& i) {
     i = 4;
-    return new Computation[4] {
-        Computation{ 9, 12 },
-        Computation{ 2, 7 },
-        Computation{ 15, 21 },
-        Computation{ 9, 16 }
+    return new Computation*[4] {
+        new Computation{9, 12},
+        new Computation{2, 7} ,
+        new Computation{ 15, 21 },
+        new Computation{9, 16 }
     };
 }
 
@@ -210,4 +208,13 @@ void printRes(const unordered_set<Computation*> res) {
         writeSpan(cerr, *r) << ",\n\t\t";
     }
     cerr << "}\n}";
+}
+
+void print(Computation** comps, int length) {
+    cerr << "\n[ { ";
+
+    for (int i = 0; i < length; ++i) {
+        cerr << *comps[i] << ",\n";
+    }
+    cerr << "]";
 }
